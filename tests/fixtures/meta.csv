@@ -1,0 +1,8 @@
+property,title,value,format
+identifier,Identifier,test,string
+modified,Modified,20260906,date
+provenance,Current,data-20260906T0000-structure-20210405T0000,string
+data-20260906-structure-20210405,Latest,data.csv,csv
+data-20260904-structure-20210405,Previous,old.csv,csv
+structure-20210405,Structure,structure.csv,csv
+structure-20210405,Structure,structure.csv,csv
