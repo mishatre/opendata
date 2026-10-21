@@ -1,0 +1,45 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Verify tag matches package version
+        run: >-
+          node -e "const v = require('./package.json').version;
+          if (process.env.GITHUB_REF_NAME !== 'v' + v) {
+          console.error('Tag ' + process.env.GITHUB_REF_NAME + ' does not match package version ' + v);
+          process.exit(1); }"
+
+      - run: pnpm check
+
+      - run: pnpm test
+
+      - run: pnpm build
+
+      - run: pnpm package:check
+
+      - name: Publish to npm
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

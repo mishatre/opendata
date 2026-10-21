@@ -1,60 +1,80 @@
 {
-	"name": "opendata",
-	"version": "0.0.0",
-	"description": "Streaming Russian government open-data ingestion with resumable filesystem and S3 caching.",
-	"keywords": [
-		"csv",
-		"etl",
-		"jsonl",
-		"opendata",
-		"russia",
-		"s3",
-		"streaming"
-	],
-	"license": "MIT",
-	"author": "Mikhail Tregub <mik.tregub@gmail.com>",
-	"files": [
-		"dist"
-	],
-	"type": "module",
-	"main": "./dist/index.cjs",
-	"module": "./dist/index.mjs",
-	"types": "./dist/index.d.cts",
-	"exports": {
-		".": {
-			"import": "./dist/index.mjs",
-			"require": "./dist/index.cjs"
-		},
-		"./s3": {
-			"import": "./dist/s3.mjs",
-			"require": "./dist/s3.cjs"
-		},
-		"./package.json": "./package.json"
-	},
-	"publishConfig": {
-		"access": "public"
-	},
-	"scripts": {
-		"build": "vp pack",
-		"dev": "vp pack --watch",
-		"test": "vp test",
-		"test:full": "OPENDATA_FULL_SAMPLE=1 vp test tests/full-sample.test.ts",
-		"check": "vp check",
-		"prepublishOnly": "vp check && vp test && vp pack"
-	},
-	"dependencies": {
-		"csv-parse": "^7.0.2"
-	},
-	"devDependencies": {
-		"@types/node": "^26.1.1",
-		"bumpp": "^11.1.0",
-		"typescript": "^7.0.2",
-		"vite-plus": "^0.2.4"
-	},
-	"optionalDependencies": {
-		"@aws-sdk/client-s3": "^3.1127.0"
-	},
-	"engines": {
-		"node": ">=22"
-	}
+  "name": "@gov-services/opendata",
+  "version": "0.1.0",
+  "description": "Streaming Russian government open-data ingestion with resumable filesystem caching.",
+  "keywords": [
+    "csv",
+    "etl",
+    "government",
+    "jsonl",
+    "open-data",
+    "opendata",
+    "russia",
+    "streaming",
+    "typescript"
+  ],
+  "homepage": "https://github.com/mishatre/opendata#readme",
+  "bugs": {
+    "url": "https://github.com/mishatre/opendata/issues"
+  },
+  "license": "MIT",
+  "author": "Mikhail Tregub <mik.tregub@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mishatre/opendata.git"
+  },
+  "files": [
+    "dist",
+    "CHANGELOG.md",
+    "SECURITY.md"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.cts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "vp pack",
+    "dev": "vp pack --watch",
+    "test": "vp test",
+    "test:watch": "vp test --watch",
+    "test:full": "OPENDATA_FULL_SAMPLE=1 vp test tests/full-sample.test.ts",
+    "check": "vp check",
+    "check:fix": "vp check --fix",
+    "package:check": "node scripts/check-package.mjs",
+    "prepack": "vp pack",
+    "prepublishOnly": "vp check && vp test && vp pack && node scripts/check-package.mjs",
+    "release": "bumpp"
+  },
+  "dependencies": {
+    "csv-parse": "^7.0.2"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.5",
+    "@types/node": "^26.1.1",
+    "bumpp": "^11.1.0",
+    "publint": "^0.3.24",
+    "typescript": "^7.0.2",
+    "vite-plus": "^0.2.4"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@12.11.2"
 }

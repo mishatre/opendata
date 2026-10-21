@@ -1,13 +1,21 @@
-# opendata
+# @gov-services/opendata
 
-A Node.js 22+ TypeScript library for Russian government CSV open-data publications. It discovers the latest file from `meta.csv`, caches original bytes on disk or S3, and streams records while downloading. ESM and CommonJS are supported.
+A Node.js 22+ TypeScript library for Russian government CSV open-data publications. It discovers the latest file from `meta.csv`, caches original bytes on disk, and streams records while downloading. ESM and CommonJS are supported.
 
 The library handles ingestion. Your service owns SQL transactions, application queries, scheduling, and coordination between workers.
+
+## Install
+
+```sh
+npm install @gov-services/opendata
+```
+
+Node.js 22 or newer is required. The package ships ES modules, CommonJS, and TypeScript declarations; no build step or bundler is needed.
 
 ## Start an import
 
 ```ts
-import OpendataManager from "opendata";
+import OpendataManager from "@gov-services/opendata";
 
 const manager = await OpendataManager.create({
   baseUrl: "https://minpromtorg.gov.ru/",
@@ -24,7 +32,7 @@ for await (const batch of manager.batches({ batchRecords: 1000 })) {
 }
 ```
 
-`create()` loads metadata and advisory structure information without downloading the dataset. A fresh cached metadata document avoids those requests. Consumption starts or resumes downloading. CommonJS: `const { OpendataManager } = require("opendata")`.
+`create()` loads metadata and advisory structure information without downloading the dataset. A fresh cached metadata document avoids those requests. Consumption starts or resumes downloading. CommonJS: `const { OpendataManager } = require("@gov-services/opendata")`.
 
 ## Outputs
 
@@ -79,7 +87,7 @@ Cursors are opaque trusted application state, not authentication tokens. Evicted
 Filesystem caching defaults to `.cache/opendata` relative to the working directory. Original bytes are stored in approximately 8 MiB immutable chunks with SHA-256 checksums and an atomic manifest. A chunk becomes durable before its records can be emitted. Raw download completion and successful parsing under a profile are separate states.
 
 ```ts
-import { FileCache } from "opendata";
+import { FileCache } from "@gov-services/opendata";
 
 const manager = await OpendataManager.create({
   baseUrl,
@@ -107,30 +115,9 @@ Recovery uses `Range`/`If-Range` only with a strong ETag and compatible transpor
 
 One worker must own a dataset at a time, including across manager instances sharing storage. A manager rejects overlapping operations with `MANAGER_BUSY`. Distributed coordination belongs in your service.
 
-### S3-compatible storage
+### Custom storage
 
-```ts
-import { S3Client } from "@aws-sdk/client-s3";
-import OpendataManager from "opendata";
-import { S3Cache } from "opendata/s3";
-
-const client = new S3Client({
-  region: "us-east-1",
-  // endpoint: "https://your-s3-compatible-endpoint",
-  // forcePathStyle: true,
-  // Credentials use the standard AWS SDK provider chain.
-});
-
-const manager = await OpendataManager.create({
-  baseUrl,
-  identifier,
-  cache: new S3Cache({ client, bucket: "my-import-cache", prefix: "government" }),
-});
-```
-
-The optional AWS SDK loads only through `opendata/s3`. Install `@aws-sdk/client-s3` if optional dependencies were omitted. The caller owns the client and its lifecycle; the bucket must exist. The adapter uses GET, PUT, DELETE, and paginated LIST within its prefix. Separate chunk objects are readable before the full download completes, requiring neither local disk nor unfinished multipart objects.
-
-Custom backends implement `CacheAdapter`: `read`, atomic `write`, idempotent `delete`, and recursive `keys(prefix)`. These are storage infrastructure operations; the manager has no dataset search/list/get API. Backends must provide read-after-write consistency and preserve exact bytes.
+Custom backends implement `CacheAdapter`: `read`, atomic `write`, idempotent `delete`, and recursive `keys(prefix)`. These are storage infrastructure operations; the manager has no dataset search/list/get API. Backends must provide read-after-write consistency and preserve exact bytes. Pass any adapter as `cache`; `FileCache` is the default.
 
 ## Provider and dataset overrides
 
@@ -141,7 +128,7 @@ CSV headers define keys. Structure files are advisory and never drop columns or 
 Delimiter detection considers comma, semicolon, and tab using a bounded sample; ambiguity requires an override. UTF-8 is the default, UTF-16 BOMs are recognized, and `csv.encoding` supports Windows-1251 and other Node `TextDecoder` encodings. `metadataCsv` and `structureCsv` independently configure those documents.
 
 ```ts
-import type { ProviderProfile } from "opendata";
+import type { ProviderProfile } from "@gov-services/opendata";
 
 const profile: ProviderProfile = {
   id: "my-service/products",
@@ -163,9 +150,9 @@ const profile: ProviderProfile = {
 const manager = await OpendataManager.create({ baseUrl, identifier, profiles: [profile] });
 ```
 
-The example is an application-specific transform. The supplied Minpromtorg file needs no built-in repair, so the exported built-in registry starts empty. Tested publisher-specific rules can be added through the same mechanism.
+The example is an application-specific transform. The supplied Minpromtorg file needs no built-in repair. Tested publisher-specific rules can be added through the same mechanism.
 
-Precedence: defaults → built-in provider → built-in dataset → custom provider → custom dataset → explicit options. Custom IDs replace built-in IDs; `disabledProfiles` disables IDs. One profile may match each layer. Origins include scheme and port; identifiers match exactly. CSV settings merge by property; hooks replace earlier hooks rather than composing implicitly.
+Precedence: defaults → provider profile → dataset profile → explicit options. One profile may match each scope. Origins include scheme and port; identifiers match exactly. `disabledProfiles` ignores profile IDs. CSV settings merge by property; hooks replace earlier hooks rather than composing implicitly.
 
 | Hook           | Input → output                                              |
 | -------------- | ----------------------------------------------------------- |
@@ -196,16 +183,23 @@ Errors use `OpendataError` with `code`, `diagnostic`, and `cause`; cancellation 
 
 ```sh
 pnpm install
-pnpm check
-pnpm test
-pnpm build
+pnpm check        # formatting, lint, and type checking
+pnpm test         # unit and integration tests against a local fixture server
+pnpm build        # ESM, CJS, and declaration output in dist/
+pnpm package:check # publint and arethetypeswrong on the packed tarball
 
 # Requires the supplied files in example/; writes .cache/full-sample-report.json.
 pnpm test:full
 ```
 
-Regular tests use local HTTP and S3-protocol fixture servers without external services. The opt-in full-sample test asserts 513,856 records, 27 fields, 15,571 multiline records, output before EOF, and peak heap below 256 MiB.
+Regular tests use a local HTTP fixture server without external services. The opt-in full-sample test asserts 513,856 records, 27 fields, 15,571 multiline records, output before EOF, and peak heap below 256 MiB.
 
-For an additional existing S3-compatible test bucket, set `OPENDATA_S3_TEST_ENDPOINT`, `OPENDATA_S3_TEST_BUCKET`, and standard AWS SDK credentials, then run `pnpm test tests/cache.test.ts`. It creates a unique test prefix and removes its objects afterward.
+Continuous integration runs `pnpm check`, `pnpm test`, `pnpm build`, and `pnpm package:check` on Node.js 22 and 24. Only distribution artifacts, README, license, and changelog are packaged; datasets, tests, credentials, and caches are excluded. Building and testing do not publish the package.
 
-Only distribution artifacts, README, and license are packaged; datasets, tests, credentials, and caches are excluded. Building and testing do not publish the package.
+To release, bump the version and tag (`pnpm release`), push the tag, and let the publish workflow create a provenance-signed npm release. Manual publishing requires membership in the `gov-services` npm organization:
+
+```sh
+pnpm publish
+```
+
+`prepublishOnly` refuses to publish unless checks, tests, the build, `publint`, and `arethetypeswrong` all pass.
