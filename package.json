@@ -63,7 +63,7 @@
     "release": "bumpp"
   },
   "dependencies": {
-    "csv-parse": "^7.0.2"
+    "csv-parse": "^7.0.3"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.5",
